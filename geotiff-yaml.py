@@ -21,10 +21,34 @@ def run_command(command, work_dir):
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
 
 
+def get_projection(img):
+    left, bottom, right, top = img.bounds
+    spatial_reference =  str(str(getattr(img, 'crs_wkt', None) or img.crs.wkt))
+    geo_ref_points = {
+            'ul': {'x': left, 'y': top},
+            'ur': {'x': right, 'y': top},
+            'll': {'x': left, 'y': bottom},
+            'lr': {'x': right, 'y': bottom},
+        }
+    return spatial_reference, geo_ref_points
+
+
+def get_coords(geo_ref_points, spatial_ref):
+    spatial_ref = osr.SpatialReference(spatial_ref)
+    t = osr.CoordinateTransformation(spatial_ref, spatial_ref.CloneGeogCS())
+
+    def transform(p):
+        lon, lat, z = t.TransformPoint(p['x'], p['y'])
+        return {'lon': lon, 'lat': lat}
+
+    return {key: transform(p) for key, p in geo_ref_points.items()}
+
+
 def prep_dataset(path):
     #left, right, top, bottom
     with rasterio.open(str(path)) as img:
         left, bottom, right, top = img.bounds
+    spatial_ref, geo_ref = get_projection(path)
 
     creation_dt='2018-09-10T00:00:00'
     center_dt= '2013-01-01T00:00:00'
@@ -38,12 +62,7 @@ def prep_dataset(path):
             'name': 'OLI'
         },
         'extent': {
-            'coord':{
-                'ul':{'lon': left,  'lat': top},
-                'ur':{'lon': right, 'lat': top},
-                'll':{'lon': left,  'lat': bottom},
-                'lr':{'lon': right, 'lat': bottom},
-            },
+            'coord': get_coords(geo_ref, spatial_ref),
             'from_dt': center_dt,
             'to_dt': center_dt,
             'center_dt': center_dt
@@ -63,27 +82,27 @@ def prep_dataset(path):
         'image': {
             'bands': {
                 'blue': {
-                    'path': path,
+                    'path': basename(path) ,
                     'layer': 1
                 },
                 'green': {
-                    'path': path,
+                    'path': basename(path),
                     'layer': 2
                 },
                 'red': {
-                    'path': path,
+                    'path': basename(path),
                     'layer': 3
                 },
                 'nir': {
-                    'path': path,
+                    'path': basename(path),
                     'layer': 4
                 },
                 'swir1': {
-                    'path': path,
+                    'path': basename(path),
                     'layer': 5
                 },
                 'swir2': {
-                    'path': path,
+                    'path': basename(path),
                     'layer': 6
                 }
             }
@@ -130,86 +149,11 @@ def _write_dataset(fname, outfname):
         logging.info("Writing dataset yaml to %s", basename(yaml_name))
 
 
-def _write_cogtiff(fname, out_fname, outdir):
-    """ Convert the Geotiff to COG using gdal commands
-        Blocksize is 512
-        TILED <boolean>: Switch to tiled format
-        COPY_SRC_OVERVIEWS <boolean>: Force copy of overviews of source dataset
-        COMPRESS=[NONE/DEFLATE]: Set the compression to use. DEFLATE is only available if NetCDF has been compiled with
-                  NetCDF-4 support. NC4C format is the default if DEFLATE compression is used.
-        ZLEVEL=[1-9]: Set the level of compression when using DEFLATE compression. A value of 9 is best,
-                      and 1 is least compression. The default is 1, which offers the best time/compression ratio.
-        BLOCKXSIZE <int>: Tile Width
-        BLOCKYSIZE <int>: Tile/Strip Height
-        PREDICTOR <int>: Predictor Type (1=default, 2=horizontal differencing, 3=floating point prediction)
-        PROFILE <string-select>: possible values: GDALGeoTIFF,GeoTIFF,BASELINE,
-    """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        temp_fname = pjoin(tmpdir, basename(fname))
-        
-        env = ['GDAL_DISABLE_READDIR_ON_OPEN=YES',
-               'CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif']
-        subprocess.check_call(env, shell=True)
-        
-        # copy to a tempfolder
-        to_cogtif = [
-                     'gdal_translate',
-                     '-of',
-                     'GTIFF',
-                     fname, 
-                     temp_fname]
-        run_command(to_cogtif, tmpdir)
 
-        # Add Overviews
-        # gdaladdo - Builds or rebuilds overview images.
-        # 2, 4, 8,16,32 are levels which is a list of integral overview levels to build.
-        add_ovr = [
-                   'gdaladdo', 
-                   '-r', 
-                   'average',
-                   '--config',
-                   'GDAL_TIFF_OVR_BLOCKSIZE',
-                   '256',
-                   temp_fname, 
-                   '2',
-                   '4', 
-                   '8', 
-                   '16', 
-                   '32'] 
-        run_command(add_ovr, tmpdir)
-
-        # Convert to COG 
-        cogtif = [
-                  'gdal_translate', 
-                  '-co', 
-                  'TILED=YES', 
-                  '-co', 
-                  'COPY_SRC_OVERVIEWS=YES', 
-                  '-co', 
-                  'COMPRESS=DEFLATE',
-                  '-co',
-                  'ZLEVEL=9',
-                  '--config',
-                  'GDAL_TIFF_OVR_BLOCKSIZE',
-                  '256',
-                  '-co',
-                  'BLOCKXSIZE=256',
-                  '-co',
-                  'BLOCKYSIZE=256',
-                  '-co',
-                  'PREDICTOR=2',
-                  '-co',
-                  'PROFILE=GeoTIFF',
-                  temp_fname, 
-                  out_fname] 
-        run_command(cogtif, outdir) 
-
-
-@click.command(help="\b Convert Geotiff to Cloud Optimized Geotiff using gdal."
-                    " Mandatory Requirement: GDAL version should be >=2.2")
+@click.command(help="\b Extract a dtaset from a GeoTIFF.")
 @click.option('--path', '-p', required=True, help="Read the Geotiffs from this folder",
               type=click.Path(exists=True, readable=True))
-@click.option('--output', '-o', required=True, help="Write COG's into this folder",
+@click.option('--output', '-o', required=True, help="Write Yamls into this folder",
               type=click.Path(exists=True, writable=True))
 def main(path, output):
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
@@ -222,10 +166,9 @@ def main(path, output):
                 f_name = os.path.join(path, fname)
                 logging.info("Reading %s", (f_name))
                 filename = getfilename(f_name, output_dir)
-                _write_cogtiff(f_name, filename, output_dir)
                 count = count+1
                 _write_dataset(f_name, filename)
-                logging.info("Writing COG to %s, %i", dirname(filename), count)
+                logging.info("Writing Yaml to %s, %i", dirname(filename), count)
 
                
 if __name__ == "__main__":

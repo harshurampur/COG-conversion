@@ -86,6 +86,8 @@ def _write_dataset(fname, file_path, rastercount):
         dataset['image']['bands'] = add_image_path(bands, file_path, rastercount, count)
         dataset['format'] = {'name': 'GeoTIFF'}
         dataset['lineage'] = {'source_datasets': {}}
+        dataset['platform'] = {'code':'LANDSAT_5,LANDSAT_7,LANDSAT_8'}
+        dataset['instrument'] = {'name':'TM,ETM,OLI_TIRS'}
         with open(y_fname, 'w') as fp:
             yaml.dump(dataset, fp, default_flow_style=False, Dumper=Dumper)
             logging.info("Writing dataset Yaml to %s", basename(y_fname))
@@ -193,7 +195,7 @@ def main(path, output, subfolder):
 
     for path, subdirs, files in os.walk(netcdf_path):
         for fname in files:
-            if fname.endswith('.nc'):
+            if fname.endswith('LS_WATER_3577_13_-16_20100615001836500000_v1526752294.nc'):
                 f_name = pjoin(path, fname)
                 logging.info("Reading %s", basename(f_name))
                 gtiff_fname = getfilename(f_name, output_dir)
