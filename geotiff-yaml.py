@@ -52,27 +52,28 @@ def prep_dataset(path):
         left, bottom, right, top = img.bounds
     spatial_ref, geo_ref = get_projection(path)
 
-    creation_dt='2018-09-10T00:00:00'
-    center_dt= '2013-01-01T00:00:00'
+    creation_dt='2018-10-15T10:00:39.601578'
+    start_dt = '1986-01-01T00:00:00'
+    center_dt= '2016-12-31T00:00:00'
 
     doc = {
         'id': str(uuid.uuid4()),
-        'product_type': 'landsat8_barest_earth_mosaic',
+        'product_type': 'item_v2.0',
         'creation_dt': creation_dt,
-        'platform': {'code': 'LANDSAT_8'},
+        'platform': {'code': 'unknown'},
         'instrument': {
-            'name': 'OLI'
+            'name': 'unknown'
         },
         'extent': {
             'coord': get_coords(geo_ref, spatial_ref),
-            'from_dt': center_dt,
+            'from_dt': start_dt,
             'to_dt': center_dt,
             'center_dt': center_dt
         },
         'format': {'name': 'GeoTIFF'},
         'grid_spatial': {
             'projection': {
-                'spatial_reference': str(getattr(img, 'crs_wkt', None) or img.crs.wkt),
+                'spatial_reference': "EPSG:4326",
                 'geo_ref_points': {
                     'ul': {'x': left, 'y': top},
                     'ur': {'x': right, 'y': top},
@@ -83,30 +84,11 @@ def prep_dataset(path):
         },
         'image': {
             'bands': {
-                'blue': {
+                'nidem': {
                     'path': basename(path) ,
                     'layer': 1
                 },
-                'green': {
-                    'path': basename(path),
-                    'layer': 2
-                },
-                'red': {
-                    'path': basename(path),
-                    'layer': 3
-                },
-                'nir': {
-                    'path': basename(path),
-                    'layer': 4
-                },
-                'swir1': {
-                    'path': basename(path),
-                    'layer': 5
-                },
-                'swir2': {
-                    'path': basename(path),
-                    'layer': 6
-                }
+
             }
         },
         'lineage': {
@@ -117,15 +99,15 @@ def prep_dataset(path):
 
 
 def check_dir(fname):
-    directory_name = 'bare-earth'
-    addition = 'summary'
-    Version_number = 'v2.1.0'
-    instrument = 'L8'
+    directory_name = 'nidem'
+    #addition = 'summary'
+    Version_number = 'v1.0.0'
+    #instrument = 'L8'
     file_name = fname.split('/')[-1]
     fname_wo, extention = splitext(file_name)
-    x = 'x_'+ fname_wo.split('_')[-2]
-    y = 'y_' + fname_wo.split('_')[-1]
-    rel_path = pjoin(directory_name, addition, Version_number, instrument, x, y, file_name)
+    x = 'lon_'+ (fname_wo.split('_')[-2]).split(".")[-2]
+    y = 'lat_' + (fname_wo.split('_')[-1]).split(".")[-2]
+    rel_path = pjoin(directory_name, Version_number, x, y, file_name)
     return rel_path
 
 

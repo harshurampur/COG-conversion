@@ -96,15 +96,13 @@ def prep_dataset(path):
 
 
 def check_dir(fname):
-    directory_name = 'bare-earth'
-    addition = 'summary'
-    Version_number = 'v2.1.0'
-    instrument = 'L8'
+    directory_name = 'nidem'
+    Version_number = 'v1.0.0'
     file_name = fname.split('/')[-1]
     fname_wo, extention = splitext(file_name)
-    x = 'x_'+ fname_wo.split('_')[-2]
-    y = 'y_' + fname_wo.split('_')[-1]
-    rel_path = pjoin(directory_name, addition, Version_number, instrument, x, y, file_name)
+    x = 'lon_'+ (fname_wo.split('_')[-2]).split(".")[-2]
+    y = 'lat_' + (fname_wo.split('_')[-1]).split(".")[-2]
+    rel_path = pjoin(directory_name, Version_number, x, y, file_name)
     return rel_path
 
 
@@ -169,7 +167,7 @@ def _write_cogtiff(fname, out_fname, outdir):
                    'average',
                    '--config',
                    'GDAL_TIFF_OVR_BLOCKSIZE',
-                   '256',
+                   '512',
                    temp_fname, 
                    '2',
                    '4', 
@@ -191,13 +189,13 @@ def _write_cogtiff(fname, out_fname, outdir):
                   'ZLEVEL=9',
                   '--config',
                   'GDAL_TIFF_OVR_BLOCKSIZE',
-                  '256',
+                  '512',
                   '-co',
-                  'BLOCKXSIZE=256',
+                  'BLOCKXSIZE=512',
                   '-co',
-                  'BLOCKYSIZE=256',
+                  'BLOCKYSIZE=512',
                   '-co',
-                  'PREDICTOR=2',
+                  'PREDICTOR=3',
                   '-co',
                   'PROFILE=GeoTIFF',
                   temp_fname, 
@@ -224,7 +222,7 @@ def main(path, output):
                 filename = getfilename(f_name, output_dir)
                 _write_cogtiff(f_name, filename, output_dir)
                 count = count+1
-                _write_dataset(f_name, filename)
+                #_write_dataset(f_name, filename)
                 logging.info("Writing COG to %s, %i", dirname(filename), count)
 
                

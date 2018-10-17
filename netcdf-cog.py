@@ -77,11 +77,11 @@ def _write_dataset(fname, file_path, rastercount):
     for count in range(rastercount):
         if rastercount > 1:
             y_fname = file_path + '_' + str(count+1) + '.yaml'
-            dataset_object = (dataset_array.dataset.item(count)).decode('utf-8')
+            #dataset_object = (dataset_array.dataset.item(count)).decode('utf-8')
         else:
             y_fname = file_path + '.yaml'
-            dataset_object = (dataset_array.dataset.item()).decode('utf-8')
-        dataset = yaml.load(dataset_object, Loader=Loader)
+            #dataset_object = (dataset_array.dataset.item()).decode('utf-8')
+        dataset = yaml.load(dataset_array, Loader=Loader)
         bands = dataset['image']['bands']
         dataset['image']['bands'] = add_image_path(bands, file_path, rastercount, count)
         dataset['format'] = {'name': 'GeoTIFF'}
@@ -195,7 +195,7 @@ def main(path, output, subfolder):
 
     for path, subdirs, files in os.walk(netcdf_path):
         for fname in files:
-            if fname.endswith('LS_WATER_3577_13_-16_20100615001836500000_v1526752294.nc'):
+            if fname.endswith('NIDEM_228_149.65_-21.55.nc'):
                 f_name = pjoin(path, fname)
                 logging.info("Reading %s", basename(f_name))
                 gtiff_fname = getfilename(f_name, output_dir)
@@ -209,7 +209,7 @@ def main(path, output, subfolder):
                     sds_open = gdal.Open(subdatasets[0][0])
                     rastercount = sds_open.RasterCount
                     dataset = None
-                    _write_cogtiff(gtiff_fname, subdatasets, rastercount)
+                    #_write_cogtiff(gtiff_fname, subdatasets, rastercount)
                     _write_dataset(f_name, gtiff_fname, rastercount)
                     logging.info("Writing COG to %s", basename(gtiff_fname))
 
