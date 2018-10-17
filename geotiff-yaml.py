@@ -9,6 +9,7 @@ import rasterio
 import uuid
 import yaml
 from yaml import CLoader as Loader, CDumper as Dumper
+from osgeo import osr
 
 
 def run_command(command, work_dir): 
@@ -21,10 +22,11 @@ def run_command(command, work_dir):
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
 
 
-def get_projection(img):
-    left, bottom, right, top = img.bounds
-    spatial_reference =  str(str(getattr(img, 'crs_wkt', None) or img.crs.wkt))
-    geo_ref_points = {
+def get_projection(path):
+    with rasterio.open(str(path)) as img:
+        left, bottom, right, top = img.bounds
+        spatial_reference =  str(getattr(img, 'crs_wkt', None) or img.crs.wkt)
+        geo_ref_points = {
             'ul': {'x': left, 'y': top},
             'ur': {'x': right, 'y': top},
             'll': {'x': left, 'y': bottom},
@@ -150,7 +152,7 @@ def _write_dataset(fname, outfname):
 
 
 
-@click.command(help="\b Extract a dtaset from a GeoTIFF.")
+@click.command(help="\b Extract a dataset from a GeoTIFF.")
 @click.option('--path', '-p', required=True, help="Read the Geotiffs from this folder",
               type=click.Path(exists=True, readable=True))
 @click.option('--output', '-o', required=True, help="Write Yamls into this folder",
