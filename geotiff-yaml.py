@@ -58,12 +58,8 @@ def prep_dataset(path):
 
     doc = {
         'id': str(uuid.uuid4()),
-        'product_type': 'item_v2.0',
+        'product_type': 'nidem_v1.0.0',
         'creation_dt': creation_dt,
-        'platform': {'code': 'unknown'},
-        'instrument': {
-            'name': 'unknown'
-        },
         'extent': {
             'coord': get_coords(geo_ref, spatial_ref),
             'from_dt': start_dt,
