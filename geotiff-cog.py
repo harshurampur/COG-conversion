@@ -96,13 +96,20 @@ def prep_dataset(path):
 
 
 def check_dir(fname):
-    directory_name = 'nidem'
-    Version_number = 'v1.0.0'
+    directory_name = 'HLTC'
+    Version_number = 'v2.0.0'
+    composites = "composite"
     file_name = fname.split('/')[-1]
     fname_wo, extention = splitext(file_name)
-    x = 'lon_'+ (fname_wo.split('_')[-2]).split(".")[-2]
-    y = 'lat_' + (fname_wo.split('_')[-1]).split(".")[-2]
-    rel_path = pjoin(directory_name, Version_number, x, y, file_name)
+    #Check whether High or Low
+    highorlow = fname_wo.split("_")[1]
+    if highorlow == "HIGH":
+        level_name = "high-tide"
+    else:
+        level_name = "low-tide"
+    x = 'lon_'+ (fname_wo.split('_')[-6]).split(".")[-2]
+    y = 'lat_' + (fname_wo.split('_')[-5]).split(".")[-2]
+    rel_path = pjoin(directory_name, Version_number,composites,level_name, x, y, file_name)
     return rel_path
 
 
@@ -173,7 +180,8 @@ def _write_cogtiff(fname, out_fname, outdir):
                    '4', 
                    '8', 
                    '16', 
-                   '32'] 
+                   '32',
+                   '64']
         run_command(add_ovr, tmpdir)
 
         # Convert to COG 
@@ -216,7 +224,7 @@ def main(path, output):
     count = 0
     for path, subdirs, files in os.walk(gtiff_path):
         for fname in files:
-            if fname.endswith('.tif'):
+            if fname.startswith('COMPOSITE') and fname.endswith('.tif'):
                 f_name = os.path.join(path, fname)
                 logging.info("Reading %s", (f_name))
                 filename = getfilename(f_name, output_dir)

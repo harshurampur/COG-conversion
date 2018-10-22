@@ -26,7 +26,7 @@ def run_command(command, work_dir):
 def check_file_exists(fname):
     """Check If All The files Exists
        Return True If all File exists
-       Else Return  False if File does not exists
+       Else Return  False if File does not exists
        and Check if the COG conversion is carried out successfully
        by using rasterio
     """
@@ -40,10 +40,22 @@ def check_file_exists(fname):
 
 
 def check_dir(fname):
-    file_name = fname.split('/')
-    rel_path = pjoin(*file_name[-2:])
-    file_wo_extension, extension = splitext(rel_path)
-    return file_wo_extension
+    directory_name = 'HLTC_netcdfs'
+    Version_number = 'v2.0.0'
+    composites = "composite"
+    file_name = fname.split('/')[-1]
+    fname_wo, extention = splitext(file_name)
+    #Check whether High or Low
+    highorlow = fname_wo.split("_")[1]
+    if highorlow == "HIGH":
+        level_name = "high-tide"
+    else:
+        level_name = "low-tide"
+    x = 'lon_'+ (fname_wo.split('_')[-6]).split(".")[-2]
+    y = 'lat_' + (fname_wo.split('_')[-5]).split(".")[-2]
+    rel_path = pjoin(directory_name, Version_number,composites,level_name, x, y, fname_wo)
+    return rel_path
+
 
 
 def getfilename(fname, outdir):
@@ -86,8 +98,7 @@ def _write_dataset(fname, file_path, rastercount):
         dataset['image']['bands'] = add_image_path(bands, file_path, rastercount, count)
         dataset['format'] = {'name': 'GeoTIFF'}
         dataset['lineage'] = {'source_datasets': {}}
-        dataset['platform'] = {'code':'LANDSAT_5,LANDSAT_7,LANDSAT_8'}
-        dataset['instrument'] = {'name':'TM,ETM,OLI_TIRS'}
+        dataset['product_type'] = "tidal_composite"
         with open(y_fname, 'w') as fp:
             yaml.dump(dataset, fp, default_flow_style=False, Dumper=Dumper)
             logging.info("Writing dataset Yaml to %s", basename(y_fname))
@@ -147,7 +158,8 @@ def _write_cogtiff(out_f_name, subdatasets, rastercount):
                     '4',
                     '8',
                     '16',
-                    '32']
+                    '32',
+                    '64']
                 run_command(add_ovr, tmpdir)
 
                 # Convert to COG
@@ -169,9 +181,9 @@ def _write_cogtiff(out_f_name, subdatasets, rastercount):
                     '-co',
                     'BLOCKYSIZE=512',
                     '-co',
-                    'PREDICTOR=2',
+                    'PREDICTOR=3',
                     '-co',
-                    'PROFILE=GeoTIFF',
+                    'PROFILE=GDALGeoTIFF',
                     temp_fname,
                     out_fname]
                 run_command(cogtif, dirname(out_f_name))
@@ -195,7 +207,7 @@ def main(path, output, subfolder):
 
     for path, subdirs, files in os.walk(netcdf_path):
         for fname in files:
-            if fname.endswith('NIDEM_228_149.65_-21.55.nc'):
+            if fname.endswith('.nc') and fname.startswith("COMPOSITE"):
                 f_name = pjoin(path, fname)
                 logging.info("Reading %s", basename(f_name))
                 gtiff_fname = getfilename(f_name, output_dir)
@@ -209,8 +221,8 @@ def main(path, output, subfolder):
                     sds_open = gdal.Open(subdatasets[0][0])
                     rastercount = sds_open.RasterCount
                     dataset = None
-                    #_write_cogtiff(gtiff_fname, subdatasets, rastercount)
-                    _write_dataset(f_name, gtiff_fname, rastercount)
+                    _write_cogtiff(gtiff_fname, subdatasets, rastercount)
+                    #_write_dataset(f_name, gtiff_fname, rastercount)
                     logging.info("Writing COG to %s", basename(gtiff_fname))
 
                
