@@ -52,7 +52,7 @@ def prep_dataset(path):
         left, bottom, right, top = img.bounds
     spatial_ref, geo_ref = get_projection(path)
 
-    creation_dt='2018-10-15T10:00:39.601578'
+    creation_dt='2018-10-15T10:00:00'
     start_dt = '1986-01-01T00:00:00'
     center_dt= '2016-12-31T00:00:00'
 
@@ -64,12 +64,12 @@ def prep_dataset(path):
             'coord': get_coords(geo_ref, spatial_ref),
             'from_dt': start_dt,
             'to_dt': center_dt,
-            'center_dt': center_dt
+            'center_dt': start_dt
         },
         'format': {'name': 'GeoTIFF'},
         'grid_spatial': {
             'projection': {
-                'spatial_reference': "EPSG:4326",
+                'spatial_reference': "EPSG:3577",
                 'geo_ref_points': {
                     'ul': {'x': left, 'y': top},
                     'ur': {'x': right, 'y': top},
