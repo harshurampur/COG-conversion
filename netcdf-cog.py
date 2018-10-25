@@ -26,11 +26,11 @@ def run_command(command, work_dir):
 def check_file_exists(fname):
     """Check If All The files Exists
        Return True If all File exists
-       Else Return  False if File does not exists
+       Else Return  False if File does not exists
        and Check if the COG conversion is carried out successfully
        by using rasterio
     """
-    list_fnames = [".yaml"]
+    list_fnames = [".y"]
     for l_name in list_fnames:
         if os.path.isfile(fname + l_name):
             pass
@@ -40,10 +40,21 @@ def check_file_exists(fname):
 
 
 def check_dir(fname):
-    file_name = fname.split('/')
-    rel_path = pjoin(*file_name[-2:])
-    file_wo_extension, extension = splitext(rel_path)
-    return file_wo_extension
+    directory_name = 'ITEM_V2'
+    Version_number = 'v2.0.0'
+    file_name = fname.split('/')[-1]
+    fname_wo, extention = splitext(file_name)
+    #Check whether High or Low
+    highorlow = fname_wo.split("_")[1]
+    if highorlow == "REL":
+        level_name = "relative"
+    else:
+        level_name = "confidence"
+    x = 'lon_'+ (fname_wo.split('_')[-2]).split(".")[-2]
+    y = 'lat_' + (fname_wo.split('_')[-1]).split(".")[-2]
+    rel_path = pjoin(directory_name, Version_number,level_name, x, y, fname_wo)
+    return rel_path
+
 
 
 def getfilename(fname, outdir):
@@ -61,13 +72,34 @@ def get_bandname(filename):
     return (filename.split(':'))[-1]
 
 
-def add_image_path(bands, fname, rc, count):
-    for key, value in bands.items():
-        value['layer'] = '1'
-        if rc > 1:
-            value['path'] = basename(fname) + '_' + str(count+1) + '_' + key + '.tif'
-        else:
-            value['path'] = basename(fname) + '_' + key + '.tif'
+def add_image_path(fname):
+    bands = {
+                'blue': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 1
+                },
+                'green': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 2
+                },
+                'red': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 3
+                },
+                'nir': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 4
+                },
+                'swir1': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 5
+                },
+                'swir2': {
+                    'path': basename(fname) + '.tif',
+                    'layer': 6
+                }
+            }
+
     return bands
 
 
@@ -77,17 +109,15 @@ def _write_dataset(fname, file_path, rastercount):
     for count in range(rastercount):
         if rastercount > 1:
             y_fname = file_path + '_' + str(count+1) + '.yaml'
-            #dataset_object = (dataset_array.dataset.item(count)).decode('utf-8')
+            dataset_object = (dataset_array.dataset.item(count)).decode('utf-8')
         else:
             y_fname = file_path + '.yaml'
-            #dataset_object = (dataset_array.dataset.item()).decode('utf-8')
-        dataset = yaml.load(dataset_array, Loader=Loader)
-        bands = dataset['image']['bands']
-        dataset['image']['bands'] = add_image_path(bands, file_path, rastercount, count)
+            dataset_object = (dataset_array.dataset.item()).decode('utf-8')
+        dataset = yaml.load(dataset_object, Loader=Loader)
+        dataset['image']['bands'] = add_image_path( file_path)
         dataset['format'] = {'name': 'GeoTIFF'}
         dataset['lineage'] = {'source_datasets': {}}
-        dataset['platform'] = {'code':'LANDSAT_5,LANDSAT_7,LANDSAT_8'}
-        dataset['instrument'] = {'name':'TM,ETM,OLI_TIRS'}
+        dataset['product_type'] = "item_v2.0"
         with open(y_fname, 'w') as fp:
             yaml.dump(dataset, fp, default_flow_style=False, Dumper=Dumper)
             logging.info("Writing dataset Yaml to %s", basename(y_fname))
@@ -147,7 +177,8 @@ def _write_cogtiff(out_f_name, subdatasets, rastercount):
                     '4',
                     '8',
                     '16',
-                    '32']
+                    '32',
+                    '64']
                 run_command(add_ovr, tmpdir)
 
                 # Convert to COG
@@ -169,9 +200,9 @@ def _write_cogtiff(out_f_name, subdatasets, rastercount):
                     '-co',
                     'BLOCKYSIZE=512',
                     '-co',
-                    'PREDICTOR=2',
+                    'PREDICTOR=3',
                     '-co',
-                    'PROFILE=GeoTIFF',
+                    'PROFILE=GDALGeoTIFF',
                     temp_fname,
                     out_fname]
                 run_command(cogtif, dirname(out_f_name))
@@ -195,7 +226,7 @@ def main(path, output, subfolder):
 
     for path, subdirs, files in os.walk(netcdf_path):
         for fname in files:
-            if fname.endswith('NIDEM_228_149.65_-21.55.nc'):
+            if fname.endswith('.nc') and fname.startswith('ITEM_REL_'):
                 f_name = pjoin(path, fname)
                 logging.info("Reading %s", basename(f_name))
                 gtiff_fname = getfilename(f_name, output_dir)

@@ -11,10 +11,10 @@ import yaml
 from yaml import CLoader as Loader, CDumper as Dumper
 
 
-def run_command(command, work_dir): 
-    """ 
-    A simple utility to execute a subprocess command. 
-    """ 
+def run_command(command, work_dir):
+    """
+    A simple utility to execute a subprocess command.
+    """
     try:
         check_call(command, stderr=subprocess.STDOUT, cwd=work_dir)
     except subprocess.CalledProcessError as e:
@@ -22,12 +22,12 @@ def run_command(command, work_dir):
 
 
 def prep_dataset(path):
-    #left, right, top, bottom
+    # left, right, top, bottom
     with rasterio.open(str(path)) as img:
         left, bottom, right, top = img.bounds
 
-    creation_dt='2018-09-10T00:00:00'
-    center_dt= '2013-01-01T00:00:00'
+    creation_dt = '2018-09-10T00:00:00'
+    center_dt = '2013-01-01T00:00:00'
 
     doc = {
         'id': str(uuid.uuid4()),
@@ -38,11 +38,11 @@ def prep_dataset(path):
             'name': 'OLI'
         },
         'extent': {
-            'coord':{
-                'ul':{'lon': left,  'lat': top},
-                'ur':{'lon': right, 'lat': top},
-                'll':{'lon': left,  'lat': bottom},
-                'lr':{'lon': right, 'lat': bottom},
+            'coord': {
+                'ul': {'lon': left, 'lat': top},
+                'ur': {'lon': right, 'lat': top},
+                'll': {'lon': left, 'lat': bottom},
+                'lr': {'lon': right, 'lat': bottom},
             },
             'from_dt': center_dt,
             'to_dt': center_dt,
@@ -100,15 +100,15 @@ def check_dir(fname):
     Version_number = 'v2.0.0'
     file_name = fname.split('/')[-1]
     fname_wo, extention = splitext(file_name)
-    #Check whether High or Low
+    # Check whether High or Low
     highorlow = fname_wo.split("_")[1]
     if highorlow == "REL":
         level_name = "relative"
     else:
         level_name = "confidence"
-    x = 'lon_'+ (fname_wo.split('_')[-2]).split(".")[-2]
+    x = 'lon_' + (fname_wo.split('_')[-2]).split(".")[-2]
     y = 'lat_' + (fname_wo.split('_')[-1]).split(".")[-2]
-    rel_path = pjoin(directory_name, Version_number,level_name, x, y, file_name)
+    rel_path = pjoin(directory_name, Version_number, level_name, x, y, file_name)
     return rel_path
 
 
@@ -119,8 +119,8 @@ def getfilename(fname, outdir):
     rel_path = check_dir(fname)
     out_fname = pjoin(outdir, rel_path)
     outdir = dirname(out_fname)
-    if not exists(dirname(out_fname)): 
-        os.makedirs(dirname(out_fname)) 
+    if not exists(dirname(out_fname)):
+        os.makedirs(dirname(out_fname))
     return out_fname
 
 
@@ -150,64 +150,64 @@ def _write_cogtiff(fname, out_fname, outdir):
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         temp_fname = pjoin(tmpdir, basename(fname))
-        
+
         env = ['GDAL_DISABLE_READDIR_ON_OPEN=YES',
                'CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif']
         subprocess.check_call(env, shell=True)
-        
+
         # copy to a tempfolder
         to_cogtif = [
-                     'gdal_translate',
-                     '-of',
-                     'GTIFF',
-                     fname, 
-                     temp_fname]
+            'gdal_translate',
+            '-of',
+            'GTIFF',
+            fname,
+            temp_fname]
         run_command(to_cogtif, tmpdir)
 
         # Add Overviews
         # gdaladdo - Builds or rebuilds overview images.
         # 2, 4, 8,16,32 are levels which is a list of integral overview levels to build.
         add_ovr = [
-                   'gdaladdo', 
-                   '-r', 
-                   'average',
-                   '--config',
-                   'GDAL_TIFF_OVR_BLOCKSIZE',
-                   '512',
-                   temp_fname, 
-                   '2',
-                   '4', 
-                   '8', 
-                   '16', 
-                   '32',
-                   '64']
+            'gdaladdo',
+            '-r',
+            'average',
+            '--config',
+            'GDAL_TIFF_OVR_BLOCKSIZE',
+            '512',
+            temp_fname,
+            '2',
+            '4',
+            '8',
+            '16',
+            '32',
+            '64']
         run_command(add_ovr, tmpdir)
 
-        # Convert to COG 
+        # Convert to COG
         cogtif = [
-                  'gdal_translate', 
-                  '-co', 
-                  'TILED=YES', 
-                  '-co', 
-                  'COPY_SRC_OVERVIEWS=YES', 
-                  '-co', 
-                  'COMPRESS=DEFLATE',
-                  '-co',
-                  'ZLEVEL=9',
-                  '--config',
-                  'GDAL_TIFF_OVR_BLOCKSIZE',
-                  '512',
-                  '-co',
-                  'BLOCKXSIZE=512',
-                  '-co',
-                  'BLOCKYSIZE=512',
-                  '-co',
-                  'PREDICTOR=2',
-                  '-co',
-                  'PROFILE=GDALGeoTIFF',
-                  temp_fname, 
-                  out_fname] 
-        run_command(cogtif, outdir) 
+            'gdal_translate',
+            '-co',
+            'TILED=YES',
+            '-co',
+            'COPY_SRC_OVERVIEWS=YES',
+            '-co',
+            'COMPRESS=DEFLATE',
+            '-co',
+            'ZLEVEL=9',
+            '--config',
+            'GDAL_TIFF_OVR_BLOCKSIZE',
+            '512',
+            '-co',
+            'BLOCKXSIZE=512',
+            '-co',
+            'BLOCKYSIZE=512',
+            '-co',
+            'PREDICTOR=3',
+            '-co',
+            'PROFILE=GDALGeoTIFF',
+            temp_fname,
+            out_fname]
+        run_command(cogtif, outdir)
 
 
 @click.command(help="\b Convert Geotiff to Cloud Optimized Geotiff using gdal."
@@ -223,15 +223,15 @@ def main(path, output):
     count = 0
     for path, subdirs, files in os.walk(gtiff_path):
         for fname in files:
-            if fname.startswith('ITEM_REL_') and fname.endswith('.tif'):
+            if fname.startswith('ITEM_STD_') and fname.endswith('.tif'):
                 f_name = os.path.join(path, fname)
                 logging.info("Reading %s", (f_name))
                 filename = getfilename(f_name, output_dir)
                 _write_cogtiff(f_name, filename, output_dir)
-                count = count+1
-                #_write_dataset(f_name, filename)
+                count = count + 1
+                # _write_dataset(f_name, filename)
                 logging.info("Writing COG to %s, %i", dirname(filename), count)
 
-               
+
 if __name__ == "__main__":
     main()

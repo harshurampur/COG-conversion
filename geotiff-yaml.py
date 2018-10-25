@@ -52,24 +52,28 @@ def prep_dataset(path):
         left, bottom, right, top = img.bounds
     spatial_ref, geo_ref = get_projection(path)
 
-    creation_dt='2018-10-15T10:00:00'
+    creation_dt='2018-10-15T10:00:39.601578'
     start_dt = '1986-01-01T00:00:00'
     center_dt= '2016-12-31T00:00:00'
 
     doc = {
         'id': str(uuid.uuid4()),
-        'product_type': 'nidem_v1.0.0',
+        'product_type': 'item_v2.0',
         'creation_dt': creation_dt,
+        'platform': {'code': 'unknown'},
+        'instrument': {
+            'name': 'unknown'
+        },
         'extent': {
             'coord': get_coords(geo_ref, spatial_ref),
             'from_dt': start_dt,
             'to_dt': center_dt,
-            'center_dt': start_dt
+            'center_dt': center_dt
         },
         'format': {'name': 'GeoTIFF'},
         'grid_spatial': {
             'projection': {
-                'spatial_reference': "EPSG:3577",
+                'spatial_reference': "EPSG:4326",
                 'geo_ref_points': {
                     'ul': {'x': left, 'y': top},
                     'ur': {'x': right, 'y': top},
